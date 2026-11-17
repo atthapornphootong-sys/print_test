@@ -1,0 +1,51 @@
+Array
+(
+    [0] => Array
+        (
+            [key] => allow_debt
+            [value] => 1
+            [description] => 
+            [updated_at] => 2026-04-17 22:37:19
+        )
+
+    [1] => Array
+        (
+            [key] => cashier_pin
+            [value] => 1234
+            [description] => PIN Code แคชเชียร์
+            [updated_at] => 2026-04-17 13:27:21
+        )
+
+    [2] => Array
+        (
+            [key] => debt_limit
+            [value] => 20
+            [description] => วงเงินติดหนี้สูงสุด (0 = ไม่อนุญาตติดหนี้)
+            [updated_at] => 2026-04-22 11:17:07
+        )
+
+    [3] => Array
+        (
+            [key] => exchange_rate_baht
+            [value] => 2
+            [description] => อัตราแลกเปลี่ยน (บาท)
+            [updated_at] => 2026-04-29 15:00:57
+        )
+
+    [4] => Array
+        (
+            [key] => exchange_rate_points
+            [value] => 1
+            [description] => อัตราแลกเปลี่ยน (พอยต์ที่ได้)
+            [updated_at] => 2026-04-29 14:46:41
+        )
+
+    [5] => Array
+        (
+            [key] => points_per_page
+            [value] => 1
+            [description] => พอยต์ต่อ 1 หน้า
+            [updated_at] => 2026-04-30 14:48:42
+        )
+
+)

@@ -1,0 +1,251 @@
+<?php
+require_once '../../config/auth.php';
+$page_title = "ตั้งค่าระบบ";
+require_once '../../static/header.php';
+?>
+
+<div class="card">
+    <div class="card-header">
+        <h2>⚙️ ตั้งค่าระบบ</h2>
+    </div>
+    
+    <div style="padding: 30px;">
+        <div class="stats-grid" style="grid-template-columns: 1fr 1fr;">
+            
+            <div class="card" style="margin:0;">
+                <div class="card-header">
+                    <h3>💰 ค่าพอยต์การพิมพ์</h3>
+                </div>
+                <div style="padding: 20px;">
+                    <div class="form-group">
+                        <label>พอยต์ต่อ 1 หน้า</label>
+                        <div style="display:flex; gap:10px; align-items:center;">
+                            <input type="number" id="points_per_page" class="form-control" 
+                                min="1" max="100" value="1" style="width:120px;">
+                            <span>พอยต์</span>
+                        </div>
+                        <small style="color:#888; margin-top:5px; display:block;">
+                            เช่น ตั้งค่า 3 = พิมพ์ 1 หน้า หัก 3 พอยต์
+                        </small>
+                    </div>
+                    <button onclick="saveSetting('points_per_page')" class="btn btn-primary" style="margin-top:15px;">
+                        💾 บันทึก
+                    </button>
+                    <div id="points_per_page_status" style="margin-top:10px;"></div>
+                </div>
+            </div>
+
+            <div class="card" style="margin:0;">
+                <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;">
+                    <h3>🔴 ระบบติดหนี้</h3>
+                    <!-- Toggle Switch -->
+                    <label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin:0;">
+                        <span id="allow_debt_label" style="font-size:13px;font-weight:600;color:#888;">ปิดอยู่</span>
+                        <div style="position:relative;width:44px;height:24px;" onclick="toggleAllowDebt()">
+                            <input type="checkbox" id="allow_debt_toggle" style="opacity:0;width:0;height:0;position:absolute;">
+                            <span id="allow_debt_track" style="position:absolute;inset:0;border-radius:34px;background:#ccc;transition:.3s;cursor:pointer;"></span>
+                            <span id="allow_debt_thumb" style="position:absolute;height:18px;width:18px;left:3px;bottom:3px;background:white;border-radius:50%;transition:.3s;box-shadow:0 1px 4px rgba(0,0,0,.3);"></span>
+                        </div>
+                    </label>
+                </div>
+                <div style="padding: 20px;">
+                    <div id="allow_debt_hint" style="background:#fff3cd;border:1px solid #ffc107;border-radius:8px;padding:10px 14px;margin-bottom:16px;font-size:13px;color:#856404;display:none;">
+                        ⚠️ เปิดระบบติดหนี้แล้ว — นักศึกษาสามารถพิมพ์ได้แม้พอยต์ไม่พอ (ภายในวงเงินที่กำหนด)
+                    </div>
+                    <div class="form-group">
+                        <label>วงเงินติดหนี้สูงสุด (พอยต์)</label>
+                        <div style="display:flex; gap:10px; align-items:center;">
+                            <input type="number" id="debt_limit" class="form-control" 
+                                min="1" max="9999" value="50" style="width:120px;" id="debt_limit_input">
+                            <span>พอยต์</span>
+                        </div>
+                        <small style="color:#888; margin-top:5px; display:block;">
+                            เช่น ตั้ง 50 = ติดหนี้ได้สูงสุด 50 พอยต์ก่อนระบบบล็อก
+                        </small>
+                    </div>
+                    <button onclick="saveDebtSettings()" class="btn btn-primary" style="margin-top:15px; background:#c53030;">
+                        💾 บันทึกการตั้งค่าหนี้
+                    </button>
+                    <div id="debt_limit_status" style="margin-top:10px;"></div>
+                </div>
+            </div>
+
+
+            <div class="card" style="margin:0;">
+                <div class="card-header">
+                    <h3>🔐 PIN Code แคชเชียร์</h3>
+                </div>
+                <div style="padding: 20px;">
+                    <div class="form-group">
+                        <label>PIN สำหรับเข้าหน้าจัดการพอยต์</label>
+                        <div style="display:flex; gap:10px; align-items:center;">
+                            <input type="password" id="cashier_pin" class="form-control" 
+                                maxlength="8" placeholder="ตั้ง PIN 4-8 หลัก" style="width:160px; letter-spacing:4px; font-size:18px;">
+                        </div>
+                        <small style="color:#888; margin-top:5px; display:block;">
+                            ปล่อยว่าง = ไม่ใช้ PIN (เข้าได้เลย) | PIN จะขอทุกครั้งที่เปิด Browser ใหม่
+                        </small>
+                    </div>
+                    <div style="display:flex; gap:8px; margin-top:15px; align-items:center;">
+                        <button onclick="savePinSetting()" class="btn btn-primary" style="background:#555;">
+                            💾 บันทึก PIN
+                        </button>
+                        <button onclick="clearPin()" class="btn" style="background:#ddd; color:#333;">
+                            🗑️ ล้าง PIN
+                        </button>
+                    </div>
+                    <div id="cashier_pin_status" style="margin-top:10px;"></div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<script>
+// โหลดค่าปัจจุบัน
+async function loadSettings() {
+    try {
+        const res = await fetch('../../config/controller.php?action=get_settings');
+        const data = await res.json();
+        if (data.success) {
+            const s = data.data;
+            if (s.points_per_page !== undefined) {
+                document.getElementById('points_per_page').value = s.points_per_page;
+            }
+            if (s.debt_limit !== undefined) {
+                document.getElementById('debt_limit').value = s.debt_limit || 50;
+            }
+            // โหลดสถานะ allow_debt
+            const allowed = s.allow_debt == '1' || s.allow_debt === true || s.allow_debt === 1;
+            setDebtToggle(allowed);
+            // PIN แสดงแค่ placeholder ว่ามีหรือไม่ (ไม่แสดงค่าจริง)
+            if (s.cashier_pin !== undefined) {
+                document.getElementById('cashier_pin').placeholder = s.cashier_pin ? '••••••••' : 'ตั้ง PIN 4-8 หลัก';
+            }
+        }
+    } catch(e) { console.error(e); }
+}
+
+function setDebtToggle(enabled) {
+    const track = document.getElementById('allow_debt_track');
+    const thumb = document.getElementById('allow_debt_thumb');
+    const label = document.getElementById('allow_debt_label');
+    const hint  = document.getElementById('allow_debt_hint');
+    if (enabled) {
+        track.style.background = '#c53030';
+        thumb.style.left = '23px';
+        label.textContent = 'เปิดอยู่';
+        label.style.color = '#c53030';
+        hint.style.display = '';
+    } else {
+        track.style.background = '#ccc';
+        thumb.style.left = '3px';
+        label.textContent = 'ปิดอยู่';
+        label.style.color = '#888';
+        hint.style.display = 'none';
+    }
+    document.getElementById('allow_debt_toggle').checked = enabled;
+}
+
+async function toggleAllowDebt() {
+    const isOn = document.getElementById('allow_debt_toggle').checked;
+    const newVal = isOn ? '0' : '1';  // toggle
+    try {
+        const res = await fetch('../../config/controller.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'update_setting', key: 'allow_debt', value: newVal })
+        }).then(r => r.json());
+        if (res.success) {
+            setDebtToggle(newVal === '1');
+        } else {
+            alert('❌ ' + res.message);
+        }
+    } catch(e) { alert('เกิดข้อผิดพลาด'); }
+}
+
+async function saveDebtSettings() {
+    const limit = document.getElementById('debt_limit').value;
+    const statusEl = document.getElementById('debt_limit_status');
+    try {
+        const res = await fetch('../../config/controller.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'update_setting', key: 'debt_limit', value: limit })
+        }).then(r => r.json());
+        if (res.success) {
+            statusEl.innerHTML = '<span style="color:#14764e;">✅ บันทึกวงเงินสำเร็จ</span>';
+        } else {
+            statusEl.innerHTML = '<span style="color:#c53030;">❌ ' + res.message + '</span>';
+        }
+    } catch(e) {
+        statusEl.innerHTML = '<span style="color:#c53030;">❌ เกิดข้อผิดพลาด</span>';
+    }
+    setTimeout(() => { statusEl.innerHTML = ''; }, 3000);
+}
+
+async function saveSetting(key) {
+    const value = document.getElementById(key).value;
+    const statusEl = document.getElementById(key + '_status');
+    
+    try {
+        const res = await fetch('../../config/controller.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'update_setting', key: key, value: value })
+        });
+        const data = await res.json();
+        
+        if (data.success) {
+            statusEl.innerHTML = '<span style="color:#14764e;">✅ บันทึกสำเร็จ</span>';
+        } else {
+            statusEl.innerHTML = '<span style="color:#c53030;">❌ ' + data.message + '</span>';
+        }
+    } catch(e) {
+        statusEl.innerHTML = '<span style="color:#c53030;">❌ เกิดข้อผิดพลาด</span>';
+    }
+    
+    setTimeout(() => { statusEl.innerHTML = ''; }, 3000);
+}
+
+document.addEventListener('DOMContentLoaded', loadSettings);
+
+async function savePinSetting() {
+    const pin = document.getElementById('cashier_pin').value;
+    const statusEl = document.getElementById('cashier_pin_status');
+    if (pin && (pin.length < 4)) {
+        statusEl.innerHTML = '<span style="color:#c53030;">❌ PIN ต้องมีอย่างน้อย 4 หลัก</span>';
+        setTimeout(() => { statusEl.innerHTML = ''; }, 3000);
+        return;
+    }
+    try {
+        const res = await fetch('../../config/controller.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'update_setting', key: 'cashier_pin', value: pin })
+        });
+        const data = await res.json();
+        if (data.success) {
+            statusEl.innerHTML = pin
+                ? '<span style="color:#14764e;">✅ ตั้ง PIN สำเร็จ</span>'
+                : '<span style="color:#14764e;">✅ ล้าง PIN สำเร็จ (ไม่ใช้ PIN)</span>';
+            // Reset session ให้ขอ PIN ใหม่ถ้ามีการเปลี่ยน
+            sessionStorage.removeItem('cashier_pin_ok');
+        } else {
+            statusEl.innerHTML = '<span style="color:#c53030;">❌ ' + data.message + '</span>';
+        }
+    } catch(e) {
+        statusEl.innerHTML = '<span style="color:#c53030;">❌ เกิดข้อผิดพลาด</span>';
+    }
+    setTimeout(() => { statusEl.innerHTML = ''; }, 3000);
+}
+
+function clearPin() {
+    document.getElementById('cashier_pin').value = '';
+    savePinSetting();
+}
+
+</script>
+
+<?php require_once '../../static/footer.php'; ?>
